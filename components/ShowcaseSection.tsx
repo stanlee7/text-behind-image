@@ -26,7 +26,7 @@ const examples = [
 
 export default function ShowcaseSection() {
     return (
-        <section className="bg-white py-24 w-full border-t border-gray-100">
+        <section className="bg-white py-16 md:py-24 w-full border-t border-gray-100">
             <div className="max-w-7xl mx-auto px-6">
                 <h2 className="text-3xl md:text-4xl font-extrabold text-center text-gray-900 mb-16 tracking-tight">
                     다양한 스타일을 1초 만에 완성하세요

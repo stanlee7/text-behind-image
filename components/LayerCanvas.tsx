@@ -200,7 +200,7 @@ const LayerCanvas = forwardRef<LayerCanvasHandle, LayerCanvasProps>(({
     };
 
     return (
-        <div ref={containerRef} className="flex-1 flex items-center justify-center p-8 bg-black/50 overflow-hidden">
+        <div ref={containerRef} className="flex-1 flex items-center justify-center p-4 md:p-8 bg-black/50 overflow-hidden min-h-[300px] md:min-h-0">
             <canvas
                 ref={canvasRef}
                 onMouseDown={handleMouseDown}

@@ -108,11 +108,11 @@ export default function Home() {
     <main className="min-h-screen w-full bg-black text-white font-[family-name:var(--font-noto-sans-kr)] selection:bg-blue-500 selection:text-white flex flex-col">
 
       {/* 1. App / Editor Section */}
-      <div className="flex-grow flex w-full border-b border-gray-800 relative bg-neutral-900/50 min-h-[800px]">
+      <div className="flex-grow flex flex-col lg:flex-row w-full border-b border-gray-800 relative bg-neutral-900/50 min-h-[calc(100vh-64px)] lg:min-h-[800px]">
 
         {/* Main Canvas Area */}
-        <div className="flex-1 flex flex-col relative">
-          <header className="h-16 border-b border-gray-800 flex items-center justify-between px-8 bg-black/50 backdrop-blur z-10 w-full absolute top-0 left-0">
+        <div className="flex-1 flex flex-col relative min-h-[50vh] lg:min-h-0">
+          <header className="h-16 border-b border-gray-800 flex items-center justify-between px-4 md:px-8 bg-black/50 backdrop-blur z-10 w-full absolute top-0 left-0">
             <button onClick={handleLogoClick} className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity z-50">
               누끼 텍스트
             </button>
@@ -129,7 +129,7 @@ export default function Home() {
                 />
                 <button
                   onClick={handleChangeImageClick}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-sm font-medium rounded-lg transition-colors border border-gray-700 text-gray-200"
+                  className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-800 hover:bg-gray-700 text-xs md:text-sm font-medium rounded-lg transition-colors border border-gray-700 text-gray-200"
                 >
                   이미지 변경
                 </button>
@@ -179,7 +179,7 @@ export default function Home() {
 
         {/* Sidebar - Fixed to the right within this section */}
         {originalImage && (
-          <div className="h-full border-l border-gray-800 bg-gray-900 pt-16 sticky top-0">
+          <div className="h-auto lg:h-full w-full lg:w-auto border-t lg:border-t-0 lg:border-l border-gray-800 bg-gray-900 pt-0 lg:pt-16 lg:sticky lg:top-0 z-20">
             <TextEditorSidebar
               textState={textState}
               setTextState={setTextState}

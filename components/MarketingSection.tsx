@@ -5,7 +5,7 @@ import { FaBolt, FaInfinity, FaShieldAlt } from 'react-icons/fa'; // Using FontA
 
 export default function MarketingSection() {
     return (
-        <section className="bg-gray-50 py-24 text-gray-900 w-full">
+        <section className="bg-gray-50 py-16 md:py-24 text-gray-900 w-full">
             <div className="max-w-7xl mx-auto px-6">
                 <div className="grid md:grid-cols-3 gap-12">
                     {/* Card 1 */}

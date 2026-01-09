@@ -26,7 +26,7 @@ export default function TextEditorSidebar({ textState, setTextState, onDownload 
     };
 
     return (
-        <div className="w-80 bg-gray-900 border-l border-gray-800 p-6 flex flex-col gap-6 h-full overflow-y-auto">
+        <div className="w-full lg:w-80 bg-gray-900 border-l lg:border-l-0 border-gray-800 p-6 flex flex-col gap-6 h-auto lg:h-full overflow-y-auto">
             <h2 className="text-xl font-bold text-white mb-2">Text Settings</h2>
 
             {/* Content */}
