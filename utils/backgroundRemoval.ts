@@ -17,6 +17,7 @@ export default class BackgroundRemover {
       formData.append('file', file);
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      console.log("Using API URL:", apiUrl); // Debug log
       const response = await fetch(`${apiUrl}/remove-bg`, {
         method: 'POST',
         body: formData,
