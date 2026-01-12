@@ -1,77 +1,22 @@
-import { pipeline, env, RawImage } from '@xenova/transformers';
-
-// Configuration for Client-side inference
-env.allowLocalModels = false;
-env.useBrowserCache = true;
+import { removeBackground } from '@imgly/background-removal';
 
 export default class BackgroundRemover {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static instance: any = null;
-
-  static async getInstance() {
-    if (!this.instance) {
-      this.instance = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
-        quantized: true,
-      });
-    }
-    return this.instance;
-  }
-
+  /**
+   * Removes the background from an image using @imgly/background-removal on the client side.
+   * @param imageSource File object or URL string of the image
+   * @returns Promise resolving to the blob URL of the image with background removed
+   */
   static async removeBackground(imageSource: string | File): Promise<string | null> {
     try {
-      const segmenter = await BackgroundRemover.getInstance();
+      // The library accepts Blob, File, or URL string directly.
+      // It returns a Blob.
+      const blob = await removeBackground(imageSource);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let input: any;
-      if (imageSource instanceof File) {
-        input = await RawImage.fromBlob(imageSource);
-      } else if (typeof imageSource === 'string') {
-        input = await RawImage.fromURL(imageSource);
-      }
-
-      // Run inference
-      // result is usually array of { score: number, label: string, mask: RawImage }
-      const result = await segmenter(input);
-
-      // For briaai/RMBG-1.4 in image-segmentation pipeline, 
-      // it typically processes the image and returns a mask or the processed image.
-      // However, specifically with transformers.js image-segmentation, it returns a mask.
-      // We need to verify the output format. 
-      // Usually it's: [{ mask: RawImage, ... }]
-      // But RMBG models are often treated as 'foreground' class segmentation.
-
-      // Assuming result[0].mask is the foreground mask.
-      if (result && result.length > 0 && result[0].mask) {
-        const mask = result[0].mask;
-
-        // Create a canvas to apply the mask
-        const canvas = document.createElement('canvas');
-        canvas.width = input.width;
-        canvas.height = input.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error("Could not get canvas context");
-
-        // Draw original image
-        ctx.drawImage(input.toCanvas(), 0, 0);
-
-        // Update composition operation to mask
-        ctx.globalCompositeOperation = 'destination-in';
-
-        // Draw mask
-        ctx.drawImage(mask.toCanvas(), 0, 0);
-
-        // Return as URL
-        return canvas.toDataURL('image/png');
-      }
-
-      // If the model output is different (some custom models return the image directly in other pipelines),
-      // we might need to adjust. But standard segmentation pipeline returns masks.
-      // Fallback or error if structure is unexpected
-      console.warn("Unexpected result format from segmenter:", result);
-      return null;
-
+      // Create a local URL for the blob
+      const url = URL.createObjectURL(blob);
+      return url;
     } catch (error) {
-      console.error("Background removal service error:", error);
+      console.error("Background removal error:", error);
       throw error;
     }
   }
