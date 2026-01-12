@@ -21,6 +21,7 @@ interface TextEditorSidebarProps {
 
 export default function TextEditorSidebar({ textState, setTextState, onDownload }: TextEditorSidebarProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleChange = (key: keyof TextState, value: any) => {
         setTextState({ ...textState, [key]: value });
     };

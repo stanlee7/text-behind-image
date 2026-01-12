@@ -5,6 +5,7 @@ env.allowLocalModels = false;
 env.useBrowserCache = true;
 
 export default class BackgroundRemover {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static instance: any = null;
 
   static async getInstance() {
@@ -20,6 +21,7 @@ export default class BackgroundRemover {
     try {
       const segmenter = await BackgroundRemover.getInstance();
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let input: any;
       if (imageSource instanceof File) {
         input = await RawImage.fromBlob(imageSource);
