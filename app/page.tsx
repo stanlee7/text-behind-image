@@ -56,20 +56,21 @@ export default function Home() {
       };
 
       // 2. Remove Background (Call Python Backend)
-      // Give UI a moment to update
-      setTimeout(async () => {
-        // Pass the file object directly to the backend
-        const fgUrl = await BackgroundRemover.removeBackground(file);
-        if (fgUrl) {
-          setForegroundImage(fgUrl);
-        }
-        setIsProcessing(false);
-      }, 100);
+      // 2. Remove Background (Call Python Backend)
+      const fgUrl = await BackgroundRemover.removeBackground(file);
+      if (fgUrl) {
+        setForegroundImage(fgUrl);
+      }
+      setIsProcessing(false);
 
     } catch (error) {
       console.error(error);
       setIsProcessing(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      alert(`배경 제거 실패: ${(error as any).message}`);
     }
+
+
   };
 
   const handleDownload = () => {

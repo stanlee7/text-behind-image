@@ -1,44 +1,76 @@
+import { pipeline, env, RawImage } from '@xenova/transformers';
+
+// Configuration for Client-side inference
+env.allowLocalModels = false;
+env.useBrowserCache = true;
 
 export default class BackgroundRemover {
+  static instance: any = null;
+
+  static async getInstance() {
+    if (!this.instance) {
+      this.instance = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
+        quantized: true,
+      });
+    }
+    return this.instance;
+  }
+
   static async removeBackground(imageSource: string | File): Promise<string | null> {
     try {
-      let file: File;
+      const segmenter = await BackgroundRemover.getInstance();
 
-      if (typeof imageSource === 'string') {
-        // If string (URL), convert to Blob/File (this case might be rare now if we pass File directly)
-        const response = await fetch(imageSource);
-        const blob = await response.blob();
-        file = new File([blob], "image.png", { type: "image/png" });
-      } else {
-        file = imageSource;
+      let input: any;
+      if (imageSource instanceof File) {
+        input = await RawImage.fromBlob(imageSource);
+      } else if (typeof imageSource === 'string') {
+        input = await RawImage.fromURL(imageSource);
       }
 
-      const formData = new FormData();
-      formData.append('file', file);
+      // Run inference
+      // result is usually array of { score: number, label: string, mask: RawImage }
+      const result = await segmenter(input);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      console.log("BackgroundRemoval: Using API URL:", apiUrl);
+      // For briaai/RMBG-1.4 in image-segmentation pipeline, 
+      // it typically processes the image and returns a mask or the processed image.
+      // However, specifically with transformers.js image-segmentation, it returns a mask.
+      // We need to verify the output format. 
+      // Usually it's: [{ mask: RawImage, ... }]
+      // But RMBG models are often treated as 'foreground' class segmentation.
 
-      try {
-        const response = await fetch(`${apiUrl}/remove-bg`, {
-          method: 'POST',
-          body: formData,
-        });
+      // Assuming result[0].mask is the foreground mask.
+      if (result && result.length > 0 && result[0].mask) {
+        const mask = result[0].mask;
 
-        if (!response.ok) {
-          throw new Error(`Backend error (${response.status}): ${response.statusText}. Check API URL: ${apiUrl}`);
-        }
+        // Create a canvas to apply the mask
+        const canvas = document.createElement('canvas');
+        canvas.width = input.width;
+        canvas.height = input.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error("Could not get canvas context");
 
-        const blob = await response.blob();
-        return URL.createObjectURL(blob);
-      } catch (fetchError) {
-        console.error("Background removal request failed:", fetchError);
-        throw fetchError; // Re-throw to be caught by the caller
+        // Draw original image
+        ctx.drawImage(input.toCanvas(), 0, 0);
+
+        // Update composition operation to mask
+        ctx.globalCompositeOperation = 'destination-in';
+
+        // Draw mask
+        ctx.drawImage(mask.toCanvas(), 0, 0);
+
+        // Return as URL
+        return canvas.toDataURL('image/png');
       }
+
+      // If the model output is different (some custom models return the image directly in other pipelines),
+      // we might need to adjust. But standard segmentation pipeline returns masks.
+      // Fallback or error if structure is unexpected
+      console.warn("Unexpected result format from segmenter:", result);
+      return null;
 
     } catch (error) {
       console.error("Background removal service error:", error);
-      return null;
+      throw error;
     }
   }
 }
