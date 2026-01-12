@@ -199,6 +199,75 @@ const LayerCanvas = forwardRef<LayerCanvasHandle, LayerCanvasProps>(({
         }
     };
 
+    // Handle Touch Events
+    const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+        // Prevent scrolling while dragging text
+        if (e.cancelable) e.preventDefault();
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        const clickX = (touch.clientX - rect.left) * scaleX;
+        const clickY = (touch.clientY - rect.top) * scaleY;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.font = `${localTextState.fontWeight} ${localTextState.fontSize}px ${localTextState.fontFamily || 'sans-serif'}`;
+        const metrics = ctx.measureText(localTextState.content);
+        const textWidth = metrics.width;
+        const textHeight = localTextState.fontSize;
+
+        // Hit testing
+        const left = localTextState.x - textWidth / 2;
+        const right = localTextState.x + textWidth / 2;
+        const top = localTextState.y - textHeight / 2;
+        const bottom = localTextState.y + textHeight / 2;
+
+        if (clickX >= left && clickX <= right && clickY >= top && clickY <= bottom) {
+            setIsDragging(true);
+            setDragOffset({
+                x: clickX - localTextState.x,
+                y: clickY - localTextState.y
+            });
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+        if (!isDragging) return;
+        // Prevent scrolling while dragging text
+        if (e.cancelable) e.preventDefault();
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        const currentX = (touch.clientX - rect.left) * scaleX;
+        const currentY = (touch.clientY - rect.top) * scaleY;
+
+        setLocalTextState(prev => ({
+            ...prev,
+            x: currentX - dragOffset.x,
+            y: currentY - dragOffset.y
+        }));
+    };
+
+    const handleTouchEnd = () => {
+        if (isDragging) {
+            setIsDragging(false);
+            onTextUpdate(localTextState);
+        }
+    };
+
     return (
         <div ref={containerRef} className="flex-1 flex items-center justify-center p-4 md:p-8 bg-black/50 overflow-hidden min-h-[300px] md:min-h-0">
             <canvas
@@ -207,7 +276,10 @@ const LayerCanvas = forwardRef<LayerCanvasHandle, LayerCanvasProps>(({
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
-                className="max-w-full max-h-full shadow-2xl shadow-black border border-gray-800"
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className="max-w-full max-h-full shadow-2xl shadow-black border border-gray-800 touch-none"
                 style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
             />
         </div>
