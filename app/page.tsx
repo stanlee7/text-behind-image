@@ -1,76 +1,123 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ImageUploader from '@/components/ImageUploader';
 import LayerCanvas, { LayerCanvasHandle } from '@/components/LayerCanvas';
-import TextEditorSidebar, { TextState } from '@/components/TextEditorSidebar';
+import TextEditorSidebar from '@/components/TextEditorSidebar';
+import { TextLayer, createTextLayer } from '@/utils/text';
 import BackgroundRemover from '@/utils/backgroundRemoval';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle, X } from 'lucide-react';
 import MarketingSection from '@/components/MarketingSection';
 import Footer from '@/components/Footer';
 import ShowcaseSection from '@/components/ShowcaseSection';
 import GoogleAd from '@/components/GoogleAd';
 
+interface Progress {
+  stage: 'download' | 'process';
+  percent: number;
+}
+
+const fitFontSize = (imageWidth: number) =>
+  Math.max(40, Math.min(400, Math.round(imageWidth / 6)));
+
 export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [foregroundImage, setForegroundImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [imageSize, setImageSize] = useState({ width: 800, height: 800 });
+
+  const [layers, setLayers] = useState<TextLayer[]>(() => [createTextLayer(400, 400, 120)]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
 
   // Ref for the hidden file input (Change Image)
   const changeImageInputRef = React.useRef<HTMLInputElement>(null);
-
   const canvasRef = React.useRef<LayerCanvasHandle>(null);
 
-  const initialTextState: TextState = {
-    content: 'TEXT BEHIND',
-    x: 400,
-    y: 400,
-    fontSize: 120,
-    fontWeight: 800,
-    color: '#ffffff',
-    fontFamily: 'sans-serif',
-    isBehind: true,
-  };
-
-  const [textState, setTextState] = useState<TextState>(initialTextState);
+  // Auto-dismiss error toast
+  useEffect(() => {
+    if (!errorMsg) return;
+    const timer = setTimeout(() => setErrorMsg(null), 6000);
+    return () => clearTimeout(timer);
+  }, [errorMsg]);
 
   const handleImageSelect = async (file: File, isChange: boolean = false) => {
     const url = URL.createObjectURL(file);
     setOriginalImage(url);
     setForegroundImage(null); // Clear previous
     setIsProcessing(true);
+    setProgress(null);
+    setErrorMsg(null);
 
+    // 1. Get image dimensions to center/scale text
+    const img = new Image();
+    img.src = url;
+    img.onload = () => {
+      setImageSize({ width: img.width, height: img.height });
+      // Only reset layers on a NEW session, otherwise keep user's work
+      if (!isChange) {
+        const layer = createTextLayer(img.width / 2, img.height / 2, fitFontSize(img.width));
+        setLayers([layer]);
+        setSelectedLayerId(layer.id);
+      }
+    };
+
+    // 2. Remove Background (client-side AI)
     try {
-      // 1. Get image dimensions to center text
-      const img = new Image();
-      img.src = url;
-      img.onload = () => {
-        // Only center text if it's a NEW session, otherwise keep user's position/style
-        if (!isChange) {
-          setTextState(prev => ({
-            ...prev,
-            x: img.width / 2,
-            y: img.height / 2
-          }));
-        }
-      };
-
-      // 2. Remove Background (Call Python Backend)
-      // 2. Remove Background (Call Python Backend)
-      const fgUrl = await BackgroundRemover.removeBackground(file);
+      const fgUrl = await BackgroundRemover.removeBackground(file, (key, current, total) => {
+        setProgress({
+          stage: key.startsWith('fetch') ? 'download' : 'process',
+          percent: total > 0 ? Math.round((current / total) * 100) : 0,
+        });
+      });
       if (fgUrl) {
         setForegroundImage(fgUrl);
       }
-      setIsProcessing(false);
-
     } catch (error) {
       console.error(error);
+      setErrorMsg('배경 제거에 실패했습니다. 잠시 후 다시 시도하거나 다른 이미지를 사용해 주세요.');
+    } finally {
       setIsProcessing(false);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      alert(`배경 제거 실패: ${(error as any).message}`);
+      setProgress(null);
     }
+  };
 
+  // Layer operations
+  const handleUpdateLayer = (id: string, patch: Partial<TextLayer>) => {
+    setLayers(prev => prev.map(l => (l.id === id ? { ...l, ...patch } : l)));
+  };
 
+  const handleAddLayer = () => {
+    const layer = createTextLayer(
+      imageSize.width / 2,
+      imageSize.height / 2 + layers.length * imageSize.height * 0.08,
+      fitFontSize(imageSize.width),
+      '새 텍스트'
+    );
+    setLayers(prev => [...prev, layer]);
+    setSelectedLayerId(layer.id);
+  };
+
+  const handleDeleteLayer = (id: string) => {
+    setLayers(prev => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter(l => l.id !== id);
+      if (selectedLayerId === id) {
+        setSelectedLayerId(next[next.length - 1]?.id ?? null);
+      }
+      return next;
+    });
+  };
+
+  const handleDuplicateLayer = (id: string) => {
+    const source = layers.find(l => l.id === id);
+    if (!source) return;
+    const offset = Math.round(imageSize.width * 0.03);
+    const fresh = createTextLayer(source.x + offset, source.y + offset, source.fontSize);
+    const duplicated: TextLayer = { ...source, id: fresh.id, x: fresh.x, y: fresh.y };
+    setLayers(prev => [...prev, duplicated]);
+    setSelectedLayerId(duplicated.id);
   };
 
   const handleDownload = () => {
@@ -83,10 +130,10 @@ export default function Home() {
       if (confirm('작업 내용이 사라집니다. 메인으로 돌아가시겠습니까?')) {
         setOriginalImage(null);
         setForegroundImage(null);
-        setTextState(initialTextState);
+        const layer = createTextLayer(400, 400, 120);
+        setLayers([layer]);
+        setSelectedLayerId(null);
       }
-    } else {
-      // Already home, do nothing or reload
     }
   };
 
@@ -163,16 +210,29 @@ export default function Home() {
                 ref={canvasRef}
                 originalImageUrl={originalImage}
                 foregroundImageUrl={foregroundImage}
-                textState={textState}
-                onTextUpdate={setTextState}
+                layers={layers}
+                selectedLayerId={selectedLayerId}
+                onSelectLayer={setSelectedLayerId}
+                onLayerUpdate={handleUpdateLayer}
               />
             )}
 
             {/* Processing Indicator */}
             {isProcessing && (
-              <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-900/90 border border-gray-700 text-white px-6 py-3 rounded-full flex items-center gap-3 shadow-2xl z-50">
-                <Loader2 className="animate-spin w-5 h-5 text-blue-400" />
-                <span className="text-sm font-semibold tracking-wide">Removing Background...</span>
+              <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-gray-900/90 border border-gray-700 text-white px-6 py-3 rounded-full flex flex-col items-center gap-1 shadow-2xl z-50">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="animate-spin w-5 h-5 text-blue-400" />
+                  <span className="text-sm font-semibold tracking-wide">
+                    {progress?.stage === 'download'
+                      ? `AI 모델 다운로드 중... ${progress.percent}%`
+                      : progress
+                        ? `배경 제거 중... ${progress.percent}%`
+                        : 'AI 분석 준비 중...'}
+                  </span>
+                </div>
+                {progress?.stage === 'download' && (
+                  <span className="text-[11px] text-gray-400">최초 1회만 다운로드해요. 다음부터는 빨라집니다.</span>
+                )}
               </div>
             )}
           </div>
@@ -182,13 +242,29 @@ export default function Home() {
         {originalImage && (
           <div className="h-auto lg:h-full w-full lg:w-auto border-t lg:border-t-0 lg:border-l border-gray-800 bg-gray-900 pt-0 lg:pt-16 lg:sticky lg:top-0 z-20">
             <TextEditorSidebar
-              textState={textState}
-              setTextState={setTextState}
+              layers={layers}
+              selectedLayerId={selectedLayerId}
+              onSelectLayer={setSelectedLayerId}
+              onUpdateLayer={handleUpdateLayer}
+              onAddLayer={handleAddLayer}
+              onDeleteLayer={handleDeleteLayer}
+              onDuplicateLayer={handleDuplicateLayer}
               onDownload={handleDownload}
             />
           </div>
         )}
       </div>
+
+      {/* Error Toast */}
+      {errorMsg && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-950/95 border border-red-700 text-red-100 px-5 py-3 rounded-xl flex items-center gap-3 shadow-2xl z-[100] max-w-[90vw]">
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          <span className="text-sm">{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} className="text-red-300 hover:text-white shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* AdSense: Middle Banner */}
       <div className="w-full flex justify-center my-12">

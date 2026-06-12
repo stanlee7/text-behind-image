@@ -43,8 +43,8 @@ export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
                 onChange={handleChange}
             />
             <UploadCloud className="w-12 h-12 text-gray-400 mb-4" />
-            <p className="text-xl font-medium text-gray-200">Drag & Drop Image Here</p>
-            <p className="text-sm text-gray-500 mt-2">or click to upload</p>
+            <p className="text-xl font-medium text-gray-200">이미지를 끌어다 놓으세요</p>
+            <p className="text-sm text-gray-500 mt-2">또는 클릭해서 업로드 · 사진은 서버로 전송되지 않아요</p>
         </div>
     );
 }
