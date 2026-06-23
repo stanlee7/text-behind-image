@@ -187,20 +187,20 @@ export default function Home() {
 
           <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden pt-16">
             {!originalImage ? (
-              <div className="max-w-2xl w-full text-center space-y-6">
-                <h2 className="text-4xl md:text-6xl font-extrabold pb-2 animate-shimmer bg-[linear-gradient(110deg,#ffffff_45%,#c084fc_50%,#ffffff_55%)] bg-[length:200%_100%] bg-clip-text text-transparent break-keep leading-tight">
+              <div className="max-w-2xl w-full text-center space-y-7 md:space-y-8">
+                <h2 className="text-[clamp(2.5rem,7vw,4rem)] font-extrabold pb-2 animate-shimmer bg-[linear-gradient(110deg,#ffffff_45%,#c084fc_50%,#ffffff_55%)] bg-[length:200%_100%] bg-clip-text text-transparent break-keep leading-[1.15] animate-fade-in-up opacity-0">
                   밋밋한 사진에<br />깊이감을 더하다
                 </h2>
                 <p
-                  className="text-gray-400 text-lg md:text-xl break-keep px-4 leading-relaxed animate-fade-in-up opacity-0"
-                  style={{ animationDelay: '0.3s' }}
+                  className="text-gray-400 text-[clamp(1rem,2.2vw,1.25rem)] break-keep px-4 leading-relaxed animate-fade-in-up opacity-0"
+                  style={{ animationDelay: '0.25s' }}
                 >
                   복잡한 포토샵 없이, AI가 자동으로 인물을 인식해 텍스트를 뒤로 넣어줍니다. <br className="hidden md:block" />
                   유튜브 썸네일, 인스타 피드를 1초 만에 완성하세요.
                 </p>
                 <div
-                  className="pt-10 flex justify-center animate-fade-in-up opacity-0"
-                  style={{ animationDelay: '0.6s' }}
+                  className="pt-8 md:pt-10 flex justify-center animate-fade-in-up opacity-0"
+                  style={{ animationDelay: '0.5s' }}
                 >
                   <ImageUploader onImageSelect={(file) => handleImageSelect(file, false)} />
                 </div>
